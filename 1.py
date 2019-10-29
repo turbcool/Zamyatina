@@ -8,14 +8,18 @@ class Quality(Enum):
     good = 'Хорошая погода'
     bad = 'Плохая погода'
     very_bad = 'Очень плохая погода'
+    none = '?'
 
 
 class Weather:
+    lenghts = []
+    nearestCenter = []
+
     dEuq = 0
     dCity = 0
     dHem = 0
 
-    def __init__(self, date, temp, fall, wind, humid, quality=None):
+    def __init__(self, date, temp, fall, wind, humid, quality=Quality.none):
         self.date = date
         self.temp = int(temp)
         self.fall = int(fall)
@@ -31,21 +35,45 @@ class Weather:
 
 
 def clasterize(wList):
-    clusters = []
-    # 1. Берём случайный центр:
-    i = random.randint(0, len(wList))
+    centers = []
+    ok = True
+    # 1. Берём первый (случайный) центр:
+    i = random.randint(0, len(wList) - 1)
     center = wList[i]
-    clusters.append(center)
+    centers.append(center)
     wList.pop(i)
 
-    # 2. Ищем образ с наибольшим расстоянием:
-    for w in wList:
-        w.dEuq = euqlid(wList, center)
+    # 2. Ищем второй центр:
     maxEuq = max(wList, key=lambda x: x.dEuq)
     maxEuqIndex = wList.index(maxEuq)
-    # 2.1 Переносим его в массив кластеров:
-    clusters.append([maxEuq])
+    centers.append(maxEuq)
     wList.pop(maxEuqIndex)
+
+    # 3. Ищем остальные центры:
+    while ok:
+        for w in wList:
+            w.lenghts = []
+
+            for index, c in enumerate(centers):
+                w.lenghts.append(euqlid(w, c))
+            w.nearestCenter = w.lenghts.index(min(w.lenghts))
+        Lw = max(wList, key=lambda w: w.lenghts[w.nearestCenter])
+        L = Lw.lenghts[Lw.nearestCenter]
+        Lindex = wList.index(max(wList, key=lambda w: w.nearestCenter))
+        # max of cross join ^^?
+        ok = (L > euqlid(centers[0], centers[1]) / 2)
+        if ok:
+            centers.append(wList[Lindex])
+            wList.pop(Lindex)
+
+    clusters = []
+    for index, c in enumerate(centers):
+        cluster = [c]
+        for w in wList:
+            if index == w.nearestCenter:
+                cluster.append(w)
+        clusters.append(cluster)
+    return clusters
 
 
 def euqlid(w1, w2):
@@ -70,7 +98,7 @@ print('3. Метод голосования')
 print('0. Завершить программу')
 print()
 
-task = input()
+task = int(input())
 
 while (task != 0):
     # Исходные данные:
@@ -87,22 +115,21 @@ while (task != 0):
         Weather('4 нояб', -4, 4.2, 6, 82, Quality.bad)
     ]
 
-    # Ввод погоды для классификации:
-    print('Введите погоду для проверки:')
-    print('Температура (гр.):')
-    t = input()
-    print('Количество осадков (мм):')
-    fall = input()
-    print('Скорость ветра (м/с):')
-    wind = input()
-    print('Влажность (%):')
-    humid = input()
-    wUser = Weather('?', t, fall, wind, humid)
+    if (task == 1):
+        # Ввод погоды для классификации:
+        print('Введите погоду для проверки:')
+        print('Температура (гр.):')
+        t = input()
+        print('Количество осадков (мм):')
+        fall = input()
+        print('Скорость ветра (м/с):')
+        wind = input()
+        print('Влажность (%):')
+        humid = input()
+        wUser = Weather('?', t, fall, wind, humid)
 
-    print('Введённая погода:')
-    print(wUser.toString())
-
-    if (task == '1'):
+        print('Введённая погода:')
+        print(wUser.toString())
         # Вычисление расстояний:
         for w in wData:
             w.dEuq = euqlid(w, wUser)
@@ -134,4 +161,29 @@ while (task != 0):
             print(w.toStringWithDistance())
 
     if task == 2:
-        clasterize(wData, wUser)
+        clusters = clasterize(wData)
+
+        for index, c in enumerate(clusters):
+            for w in c:
+                print(w.toString() + '| Кластер: ' + str(index))
+    if task == 3:
+        asd = [
+            Row(1, 0, 1, 1),
+            Row(0, 0, 1, 1),
+            Row(0, 1, 1, 1),
+            Row(1, 0, 0, 0),
+            Row(1, 0, 0, 0)
+        ]
+
+
+class Row:
+    x1 = 0
+    x2 = 0
+    x3 = 0
+    x4 = 0
+
+    def __init__(self, x1, x2, x3, x4):
+        self.x1 = x1
+        self.x2 = x2
+        self.x3 = x3
+        self.x4 = x4
