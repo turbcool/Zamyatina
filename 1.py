@@ -33,6 +33,17 @@ class Weather:
     def toStringWithDistance(self):
         return self.toString() + '||Евклид: ' + str("%.3f" % self.dEuq) + '|Хемминг: ' + str("%.3f" % self.dHem) + '|Город. кварт.: ' + str("%.3f" % self.dCity)
 
+class Row:
+    x1 = 0
+    x2 = 0
+    x3 = 0
+    x4 = 0
+
+    def __init__(self, x1, x2, x3, x4):
+        self.x1 = x1
+        self.x2 = x2
+        self.x3 = x3
+        self.x4 = x4
 
 def clasterize(wList):
     centers = []
@@ -88,19 +99,35 @@ def hemming(w1, w2):
 def city(w1, w2):
     return max([abs(w1.temp - w2.temp), abs(w1.fall - w2.fall), abs(w1.wind - w2.wind), abs(w1.humid - w2.humid)])
 
+def compare(testW, testList):
+    tPair1 = (testW[0], testW[1])
+    tPair2 = (testW[2], testW[3])
+    ok1 = 0
+    ok2 = 0
+    for w in testList:
+        t1 = (w[0], w[1])
+        t2 = (w[1], w[2])
+        if t1 == tPair1:
+            ok1=ok1+1
+        if t2 == tPair2:
+            ok2=ok2+1
+    score = ok1 + ok2
+    return score
 
 task = -1
 
-print('Введите номер задания:')
-print('1. Классификация')
-print('2. Кластеризация')
-print('3. Метод голосования')
-print('0. Завершить программу')
-print()
-
-task = int(input())
-
 while (task != 0):
+    clear()
+    print('Введите номер задания:')
+    print('1. Классификация')
+    print('2. Кластеризация')
+    print('3. Метод голосования')
+    print('4. Посчитать ошибки для метода классификации')
+    print('0. Завершить программу')
+    print()
+
+    task = int(input())
+
     # Исходные данные:
     wData = [
         Weather('26 окт', 8, 0.4, 7, 77, Quality.very_good),
@@ -115,7 +142,7 @@ while (task != 0):
         Weather('4 нояб', -4, 4.2, 6, 82, Quality.bad)
     ]
 
-    if (task == 1):
+    if task == 1:
         # Ввод погоды для классификации:
         print('Введите погоду для проверки:')
         print('Температура (гр.):')
@@ -159,7 +186,6 @@ while (task != 0):
         print('Расстояния: ')
         for w in wData:
             print(w.toStringWithDistance())
-
     if task == 2:
         clusters = clasterize(wData)
 
@@ -167,23 +193,87 @@ while (task != 0):
             for w in c:
                 print(w.toString() + '| Кластер: ' + str(index))
     if task == 3:
-        asd = [
-            Row(1, 0, 1, 1),
-            Row(0, 0, 1, 1),
-            Row(0, 1, 1, 1),
-            Row(1, 0, 0, 0),
-            Row(1, 0, 0, 0)
+        # теплая погода, солнечно, низкая влажность, был дождь
+        goodWeather = [
+            [1, 0, 1, 0],
+            [1, 0, 1, 0],
+            [0, 1, 1, 1],
+            [1, 1, 0, 0],
+            [1, 1, 1, 0]
         ]
 
+        badWeather = [
+            [1, 0, 0, 1],
+            [0, 0, 0, 0],
+            [0, 1, 1, 1],
+            [1, 1, 0, 0],
+            [0, 1, 0, 0]
+        ]
 
-class Row:
-    x1 = 0
-    x2 = 0
-    x3 = 0
-    x4 = 0
+        print('Погода была тёплой? (введите 0 или 1)')
+        i1 = int(input())
+        print('Погода была солнечной? (введите 0 или 1)')
+        i2 = int(input())
+        print('Была низкая влажность? (введите 0 или 1)')
+        i3 = int(input())
+        print('Был дождь? (введите 0 или 1)')
+        i4 = int(input())
 
-    def __init__(self, x1, x2, x3, x4):
-        self.x1 = x1
-        self.x2 = x2
-        self.x3 = x3
-        self.x4 = x4
+        testW = [i1,i2,i3,i4]
+
+        scoreForGood = compare(testW, goodWeather)
+        scoreForBad = compare(testW, badWeather)
+
+        print('За хорошую погоду:' + str(scoreForGood))
+        print('За плохую погоду:' + str(scoreForBad))
+
+        if scoreForGood > scoreForBad:
+            print('Итог: ваша погода - хорошая')
+        else:
+            print('Итог: ваша погода - плохая')
+    if task == 4:
+        print('Ошибки для класса "хорошая погода":')
+        wTest = [
+            Weather('11 нояб', -10, 10, 2, 89, 'FP'),
+            Weather('12 нояб', -3, 0, 0, 71, 'FN'),
+            Weather('13 нояб', 2, 5, 2, 92, '?'),
+            Weather('14 нояб', -8, 0, 10, 82, '?'),
+            Weather('15 нояб', 0, 5, 7, 90, 'FP'),
+            Weather('16 нояб', 5, 0, 10, 60, 'FN')
+        ]
+
+        FP=0
+        FN=0
+        for w in wTest:
+            if str(w.quality) == 'FP':
+                FP=FP+1
+            if w.quality == 'FN':
+                FN=FN+1
+        Nn = FP+FN
+        Np=len(wTest)-Nn
+
+        TP=Np-FN
+        TN=Nn-FP
+
+        nFN = FN/Np # %
+        nFP = FP/Nn # %
+
+        nTN = TN/Nn
+        nTP = TP/Np
+
+        precision = TP/(TP+FP) # %
+        recall = TP/(TP+FN) # %
+
+        print('FP: ' + str(FP))
+        print('FN: ' + str(FN))
+        print('Nn: ' + str(Nn))
+        print('Np: ' + str(Np))
+        print('TP: ' + str(TP))
+        print('TN: ' + str(TN))
+        print('nFN: ' + str(nFN) + '%')
+        print('nFP: ' + str(nFP) + '%')
+        print('nTN: ' + str(nTN))
+        print('nTP: ' + str(nTP))
+        print('precision: ' + str(precision) + '%')
+        print('recall: ' + str(recall) + '%')
+        
